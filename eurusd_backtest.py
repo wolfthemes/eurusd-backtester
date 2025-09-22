@@ -8,8 +8,8 @@ class EURUSDWithNewsFilter:
         """Stratégie EURUSD avec filtre NEWS automatique"""
         self.initial_capital = 10000
         self.capital = 10000
-        self.risk_percent = 0.5 
-        self.position_size = 0.3
+        self.risk_percent = risk_percent 
+        self.position_size = 0.67
         self.stop_loss = 15
         self.take_profit = 45
         
@@ -53,7 +53,7 @@ class EURUSDWithNewsFilter:
         print(f"🔴 SL: {self.stop_loss}p | 🟢 TP: {self.take_profit}p")
         print(f"\n📰 NEWS FILTRÉES: {', '.join(self.news_to_filter[:5])}...")
 
-    def calculate_position_size(self, capital, risk_percent, stop_loss_pips):
+    def calculate_position_size(self, risk_percent, stop_loss_pips):
         """
         Calcule la taille de position basée sur le risque pour EURUSD
         
@@ -65,8 +65,10 @@ class EURUSDWithNewsFilter:
         Returns:
             float: Taille de position arrondie à 2 décimales
         """
-        if not capital or not risk_percent or not stop_loss_pips:
+        if not risk_percent or not stop_loss_pips:
             return 0.0
+
+        capital = self.initial_capital
         
         # Pour EURUSD: 1 lot standard = 100,000 units → 1 pip = 10 USD
         pip_value = 10.0
@@ -284,8 +286,7 @@ class EURUSDWithNewsFilter:
         else:
             entry_price = market_price - (self.slippage_pips * 0.0001)
         
-        capital = self.initial_capital
-        position_size = self.calculate_position_size(capital, self.risk_percent, self.stop_loss)
+        position_size = self.calculate_position_size( self.risk_percent, self.stop_loss)
         
         commission = self.commission_per_lot * position_size / 2
         self.capital -= commission
@@ -343,7 +344,8 @@ class EURUSDWithNewsFilter:
             return
         
         pos = self.current_position
-        commission_exit = self.commission_per_lot * self.position_size / 2
+        position_size = self.calculate_position_size( self.risk_percent, self.stop_loss)
+        commission_exit = self.commission_per_lot * position_size / 2
         self.capital -= commission_exit
         
         if pos['direction'] == 'buy':
@@ -351,7 +353,7 @@ class EURUSDWithNewsFilter:
         else:
             pnl_pips = (pos['entry_price'] - exit_price) * 10000
         
-        pnl_usd = pnl_pips * self.position_size * 1000
+        pnl_usd = pnl_pips * position_size * 1000
         total_commission = pos['commission_paid'] + commission_exit
         pnl_net = pnl_usd - total_commission
         self.capital += pnl_usd
@@ -478,7 +480,7 @@ if __name__ == "__main__":
     print("="*60)
     
     # Créer l'instance avec le dossier data
-    bt = EURUSDWithNewsFilter('2021-01-01', '2025-12-31', risk_percent=0.5, data_folder='data')
+    bt = EURUSDWithNewsFilter('2021-01-01', '2025-12-31', risk_percent=1, data_folder='data')
     
     bt.news_to_filter = [
         'CPI',
