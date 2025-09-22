@@ -16,12 +16,16 @@ class EURUSDWithNewsFilter:
         # 📁 Dossier des données
         self.data_folder = data_folder
         
+        # 🔧 Paramètres de trading
+        self.invert_monday = False  # Active/désactive l'inversion le lundi
+        self.skip_friday = True     # Active/désactive le filtre vendredi
+        
         self.start_date = pd.to_datetime(start_date)
         self.end_date = pd.to_datetime(end_date)
         
-        self.spread_pips = 0.3
-        self.commission_per_lot = 3.0
-        self.slippage_pips = 0.1
+        self.spread_pips = 0.3  # FTMO spread EURUSD
+        self.commission_per_lot = 3.0  # Commission FTMO
+        self.slippage_pips = 0.05  # Slippage réduit pour FTMO
         
         self.news_to_filter = [
             'CPI',
@@ -209,12 +213,17 @@ class EURUSDWithNewsFilter:
             return False
 
     def can_trade_today(self, date):
-        if date.weekday() == 4:
-            return False, "Vendredi"
-        
+        # Vérifier et compter les news d'abord (pour les stats)
         has_news, news_reason = self.is_news_day(date)
         if has_news:
             self.news_filtered_count += 1
+        
+        # Filtre vendredi (si activé)
+        if self.skip_friday and date.weekday() == 4:
+            return False, "Vendredi"
+        
+        # Puis le filtre news
+        if has_news:
             return False, f"📰 {news_reason}"
         
         return True, "OK"
@@ -228,7 +237,8 @@ class EURUSDWithNewsFilter:
         else:
             base_signal = 'sell'
         
-        if timestamp.weekday() == 0:
+        # Inversion lundi (si activée)
+        if self.invert_monday and timestamp.weekday() == 0:
             final_signal = 'sell' if base_signal == 'buy' else 'buy'
             reason = f"LUNDI-INV: {current_price:.5f} {'>' if base_signal=='buy' else '<'} {ema_100:.5f} → {final_signal.upper()}"
         else:
