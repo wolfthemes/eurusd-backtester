@@ -8,8 +8,8 @@ class EURUSDWithNewsFilter:
         """Stratégie EURUSD avec filtre NEWS automatique"""
         self.initial_capital = 10000
         self.capital = 10000
-        self.risk_percent = risk_percent
-        self.position_size = 0.1
+        self.risk_percent = 0.5 
+        self.position_size = 0.3
         self.stop_loss = 15
         self.take_profit = 45
         
@@ -52,6 +52,34 @@ class EURUSDWithNewsFilter:
         print(f"📊 Risk: {self.risk_percent}%")
         print(f"🔴 SL: {self.stop_loss}p | 🟢 TP: {self.take_profit}p")
         print(f"\n📰 NEWS FILTRÉES: {', '.join(self.news_to_filter[:5])}...")
+
+    def calculate_position_size(self, capital, risk_percent, stop_loss_pips):
+        """
+        Calcule la taille de position basée sur le risque pour EURUSD
+        
+        Args:
+            capital (float): Capital disponible
+            risk_percent (float): Pourcentage de risque par trade (ex: 1.0 pour 1%)
+            stop_loss_pips (float): Stop loss en pips
+        
+        Returns:
+            float: Taille de position arrondie à 2 décimales
+        """
+        if not capital or not risk_percent or not stop_loss_pips:
+            return 0.0
+        
+        # Pour EURUSD: 1 lot standard = 100,000 units → 1 pip = 10 USD
+        pip_value = 10.0
+        
+        # Montant du risque en dollars
+        risk_amount = capital * (risk_percent / 100)
+        
+        # Calcul de la taille de position
+        position_size = risk_amount / (stop_loss_pips * pip_value)
+        
+        # Arrondir à 2 décimales
+        return round(position_size, 2)
+
 
     def load_news(self, filename='news.csv'):
         filepath = f"{self.data_folder}/{filename}"
@@ -256,7 +284,10 @@ class EURUSDWithNewsFilter:
         else:
             entry_price = market_price - (self.slippage_pips * 0.0001)
         
-        commission = self.commission_per_lot * self.position_size / 2
+        capital = self.initial_capital
+        position_size = self.calculate_position_size(capital, self.risk_percent, self.stop_loss)
+        
+        commission = self.commission_per_lot * position_size / 2
         self.capital -= commission
         
         if direction == 'buy':
@@ -418,7 +449,9 @@ class EURUSDWithNewsFilter:
         
         print(f"Du: {self.start_date.strftime('%Y-%m-%d')}")
         print(f"Au: {self.end_date.strftime('%Y-%m-%d')}")
+        print(f"💰 Capital initial: ${self.initial_capital:,.2f}")
         print(f"💰 Capital final: ${self.capital:,.2f}")
+        print(f"💰 Pourcentage de risque: {self.risk_percent:,.2f}%")
         print(f"💵 P&L Net: ${total_net:+,.2f} ({return_pct:+.2f}%)")
         print(f"📊 Pips: {total_pips:+.1f}")
         print(f"💸 Commissions: ${total_comm:.2f}")
@@ -445,7 +478,7 @@ if __name__ == "__main__":
     print("="*60)
     
     # Créer l'instance avec le dossier data
-    bt = EURUSDWithNewsFilter('2021-01-01', '2025-12-31', risk_percent=1.0, data_folder='data')
+    bt = EURUSDWithNewsFilter('2021-01-01', '2025-12-31', risk_percent=0.5, data_folder='data')
     
     bt.news_to_filter = [
         'CPI',
@@ -466,14 +499,5 @@ if __name__ == "__main__":
         
         print(f"\n" + "="*60)
         print(f"✅ CONCLUSION: Le biais EMA100 fonctionne!")
-        print(f"   • Signal simple: Prix > EMA100 → BUY, sinon SELL")
-        print(f"   • Inversion le lundi pour améliorer les résultats")
-        print(f"   • Filtre NEWS efficace sur événements majeurs")
-        print(f"   • SL/TP fixes (15/45) donnent un bon ratio risque/reward")
-        print(f"\n💡 Prochaines étapes possibles:")
-        print(f"   1. Optimiser le ratio SL/TP")
-        print(f"   2. Tester d'autres périodes EMA")
-        print(f"   3. Ajouter un filtre de volatilité manuel")
-        print(f"   4. Analyser les performances par jour de semaine")
     else:
         print("❌ Erreur chargement")
