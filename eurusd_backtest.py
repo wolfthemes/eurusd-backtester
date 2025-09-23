@@ -499,6 +499,7 @@ if __name__ == "__main__":
     bt.news_to_filter = [
         'CPI',
         'FOMC',
+        # 'S&P',  # must NOT exclude S&P
         'Interest Rate',
         'NFP',
         'Non-Farm',
